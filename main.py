@@ -2,7 +2,7 @@ from models import Zver
 from storage import uloz_zaznam
 from storage import nacti_vse
 from storage import uloz_vse
-
+from datetime import datetime
 
 def vypis_zaznamy():
     data = nacti_vse()
@@ -47,6 +47,65 @@ def smaz_zaznam():
     except ValueError:
         print("Musíš zadat číslo.")
 
+def uprav_zaznam():
+    data = nacti_vse()
+
+    if not data:
+        print("Nejsou žádné záznamy k úpravě.")
+        return
+    
+    vypis_zaznamy()
+
+    try:
+        cislo = int(input("Zadej číslo záznamu k úpravě: "))
+        index = cislo - 1
+
+        if index < 0 or index >= len(data):
+            print("Neplatné číslo.")
+            return
+
+        zaznam = data[index]
+
+        while True:
+            print("\nCo chceš upravit?")
+            print(f"1 - Druh: {zaznam['druh']}")
+            print(f"2 - Věk: {zaznam['vek']}")
+            print(f"3 - Pohlaví: {zaznam['pohlavi']}")
+            print(f"4 - Datum pozorování: {zaznam['datum_pozorovani']}")
+            print(f"5 - Datum ulovení: {zaznam['datum_uloveni'] if zaznam['datum_uloveni'] else '—'}")
+            print("0 - Uložit a zpět")
+
+
+            volba = input("Vyber možnost: ")
+
+            if volba == "1":
+                zaznam["druh"] = input("Nový druh: ")
+
+            elif volba == "2":
+                zaznam["vek"] = nacti_vek()
+
+            elif volba == "3":
+                zaznam["pohlavi"] = vyber_pohlavi()
+
+            elif volba == "4":
+                zaznam["datum_pozorovani"] = nacti_datum("Nové datum pozorování: ")
+
+            elif volba == "5":
+                zaznam["datum_uloveni"] = nacti_datum(
+                    "Nové datum ulovení (nebo Enter): ", True
+                )
+
+            elif volba == "0":
+                uloz_vse(data)
+                print("Záznam byl uložen.")
+                break
+
+            else:
+                print("Neplatná volba.")
+    except ValueError:
+        print("Musíš zadat číslo.")
+
+
 def vyber_pohlavi():
     while True:
         print("Vyber pohlaví:")
@@ -61,7 +120,6 @@ def vyber_pohlavi():
             return "samice"
         else:
             print("Neplatná volba.")
-
 
 def nacti_vek():
     while True:
@@ -79,17 +137,43 @@ def nacti_vek():
 
         return vek
 
+def nacti_datum(vyzva, povol_prazdne=False):
+    formáty = [
+        "%d-%m-%Y",
+        "%d.%m.%Y",
+        "%Y-%m-%d",
+        "%Y.%m.%d",
+        "%d/%m/%Y",
+        "%Y/%m/%d"
+    ]
+
+    while True:
+        vstup = input(vyzva)
+
+        if povol_prazdne and vstup == "":
+            return None
+
+        for fmt in formáty:
+            try:
+                datum = datetime.strptime(vstup, fmt)
+                return datum.strftime("%d-%m-%Y")
+            except ValueError:
+                pass
+
+        print("Neplatný formát data. Zkus např. 13-01-2026 nebo 2026/01/13")
+
 
 def pridej_zaznam():
-    druh = input("Druh zvěře: ")
+    while True:
+        druh = input("Druh zvěře: ").strip()
+        if druh:
+            break
+        print("Druh nesmí být prázdný.")
     vek = nacti_vek()
     pohlavi = vyber_pohlavi()
-    datum_pozorovani = input("Datum pozorování (YYYY-MM-DD): ")
-    datum_uloveni = input("Datum ulovení (nebo Enter): ")
-
-    if datum_uloveni == "":
-        datum_uloveni = None
-
+    datum_pozorovani = nacti_datum("Datum pozorování: ")
+    datum_uloveni = nacti_datum("Datum ulovení (nebo Enter): ", True)
+    
     zver = Zver(
         druh=druh,
         vek=vek,
@@ -97,9 +181,11 @@ def pridej_zaznam():
         datum_pozorovani=datum_pozorovani,
         datum_uloveni=datum_uloveni
     )
-
+    
     uloz_zaznam(zver)
-    print("Záznam uložen.")
+
+    print("Záznam byl úspěšně uložen.")
+
 
 def hlavni_menu():
     print("\n--- EVIDENCE ZVĚŘE ---")
@@ -107,6 +193,7 @@ def hlavni_menu():
         print("1 - Přidat nový záznam")
         print("2 - Vypsat všechny záznamy")
         print("3 - Smazat záznam")
+        print("4 - Upravit záznam")
         print("0 - Konec")
 
         volba = input("Vyber možnost: ")
@@ -117,7 +204,8 @@ def hlavni_menu():
             vypis_zaznamy()
         elif volba == "3":
             smaz_zaznam()
-
+        elif volba == "4":
+            uprav_zaznam()
         elif volba == "0":
             print("Ukončuji program.")
             break

@@ -5,5 +5,12 @@
         "pohlavi": "samice",
         "datum_pozorovani": "8888",
         "datum_uloveni": null
+    },
+    {
+        "druh": "Skřivan Polní",
+        "vek": 5,
+        "pohlavi": "samice",
+        "datum_pozorovani": "13-04-2067",
+        "datum_uloveni": null
     }
 ]
