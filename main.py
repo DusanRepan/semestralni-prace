@@ -84,7 +84,7 @@ def uprav_zaznam():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT z.id, d.nazev, z.vek, z.pohlavi,
+        SELECT  z.id, d.nazev, z.vek, z.pohlavi,
                 z.datum_pozorovani, z.datum_uloveni
         FROM zaznamy z
         JOIN druhy_zvere d ON z.druh_id = d.id
@@ -94,9 +94,15 @@ def uprav_zaznam():
     conn.close()
 
     if not zaznamy:
+        print("Žádné záznamy k úpravě.")
         return
 
-    volba = input("Vyber číslo záznamu k úpravě: ")
+    print("\nZáznamy:")
+    for i, z in enumerate(zaznamy, start=1):
+        print(f"{i}. {z[1]}, věk {z[2]}, {z[3]}, "
+            f"pozorování {z[4]}, ulovení {z[5]}")
+
+    volba = input("\nVyber číslo záznamu k úpravě: ")
 
     if not volba.isdigit():
         print("Neplatná volba.")
@@ -107,10 +113,7 @@ def uprav_zaznam():
         print("Neexistující záznam.")
         return
 
-    zaznam = zaznamy[index]
-    zaznam_id = zaznam[0]
-
-    druh, vek, pohlavi, dp, du = zaznam[1:]
+    zaznam_id, druh, vek, pohlavi, dp, du = zaznamy[index]
 
     while True:
         print("\nCo chceš upravit?")
@@ -126,17 +129,19 @@ def uprav_zaznam():
         if volba == "1":
             druh_id = vyber_druh()
             conn = get_connection()
-            conn.execute("UPDATE zaznamy SET druh_id=? WHERE id=?", (druh_id, zaznam_id))
+            cursor = conn.cursor()
+            cursor.execute("UPDATE zaznamy SET druh_id=? WHERE id=?",
+                        (druh_id, zaznam_id))
             conn.commit()
+
+            cursor.execute("SELECT nazev FROM druhy_zvere WHERE id=?", (druh_id,))
+            druh = cursor.fetchone()[0]
             conn.close()
+
             print("Druh upraven.")
 
         elif volba == "2":
-            while True:
-                novy = input("Nový věk: ")
-                if novy.isdigit():
-                    vek = int(novy)
-                    break
+            vek = nacti_vek()
             conn = get_connection()
             conn.execute("UPDATE zaznamy SET vek=? WHERE id=?", (vek, zaznam_id))
             conn.commit()
@@ -152,20 +157,16 @@ def uprav_zaznam():
         elif volba == "4":
             dp = nacti_datum("Nové datum pozorování: ")
             conn = get_connection()
-            conn.execute(
-                "UPDATE zaznamy SET datum_pozorovani=? WHERE id=?",
-                (dp, zaznam_id)
-            )
+            conn.execute("UPDATE zaznamy SET datum_pozorovani=? WHERE id=?",
+                        (dp, zaznam_id))
             conn.commit()
             conn.close()
 
         elif volba == "5":
             du = nacti_datum("Nové datum ulovení: ", povol_prazdne=True)
             conn = get_connection()
-            conn.execute(
-                "UPDATE zaznamy SET datum_uloveni=? WHERE id=?",
-                (du, zaznam_id)
-            )
+            conn.execute("UPDATE zaznamy SET datum_uloveni=? WHERE id=?",
+                        (du, zaznam_id))
             conn.commit()
             conn.close()
 
@@ -175,6 +176,7 @@ def uprav_zaznam():
 
         else:
             print("Neplatná volba.")
+
 
 def vyber_druh():
     while True:
