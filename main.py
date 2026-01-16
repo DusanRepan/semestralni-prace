@@ -1,3 +1,6 @@
+from database import init_db, init_druhy
+from database import ziskej_vsechny_druhy, pridej_druh
+from database import get_connection
 from models import Zver
 from storage import uloz_zaznam
 from storage import nacti_vse
@@ -5,106 +8,206 @@ from storage import uloz_vse
 from datetime import datetime
 
 def vypis_zaznamy():
-    data = nacti_vse()
+    conn = get_connection()
+    cursor = conn.cursor()
 
-    if not data:
-        print("Žádné záznamy nejsou uložené.")
+    cursor.execute("""
+        SELECT z.id, d.nazev, z.vek, z.pohlavi,
+                z.datum_pozorovani, z.datum_uloveni
+        FROM zaznamy z
+        JOIN druhy_zvere d ON z.druh_id = d.id
+        ORDER BY z.id
+    """)
+
+    zaznamy = cursor.fetchall()
+    conn.close()
+
+    if not zaznamy:
+        print("Žádné záznamy.")
         return
 
-    for i, z in enumerate(data, start=1):
-        print(f"{i}. Druh: {z['druh']}, "
-            f"Věk: {z['vek']}, "
-            f"Pohlaví: {z['pohlavi']}, "
-            f"Pozorování: {z['datum_pozorovani']}, "
-            f"Ulovení: {z['datum_uloveni']}")
+    for i, z in enumerate(zaznamy, start=1):
+        print(f"{i}. {z[1]}, věk {z[2]}, {z[3]}, "
+            f"pozorování {z[4]}, ulovení {z[5]}")
 
 def smaz_zaznam():
-    data = nacti_vse()
-
-    if not data:
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT  z.id, d.nazev, z.vek, z.pohlavi,
+                z.datum_pozorovani, z.datum_uloveni
+        FROM zaznamy z
+        JOIN druhy_zvere d ON z.druh_id = d.id
+        ORDER BY z.id
+    """)
+    
+    zaznamy = cursor.fetchall()
+    conn.close()
+    
+    if not zaznamy:
         print("Není co mazat.")
         return
-
-    vypis_zaznamy()
-
+    
+    print("\nZáznamy k dispozici:")
+    for i, z in enumerate(zaznamy, start=1):
+        print(f"{i}. ID: {z[0]} | {z[1]}, věk {z[2]}, {z[3]}, "
+            f"pozorování {z[4]}, ulovení {z[5]}")
+    
     try:
-        cislo = int(input("Zadej číslo záznamu ke smazání: "))
-        index = cislo - 1
-
-        if index < 0 or index >= len(data):
+        cislo = int(input("\nZadej číslo záznamu ke smazání: "))
+        zaznam_id = zaznamy[cislo - 1][0]  # Skutečné DB ID
+        
+        if cislo < 1 or cislo > len(zaznamy):
             print("Neplatné číslo.")
             return
-
-        potvrzeni = input("Opravdu chceš záznam smazat? (a/n): ")
-
+        
+        potvrzeni = input(f"Opravdu chceš smazat záznam ID {zaznam_id}? (a/n): ")
+        
         if potvrzeni.lower() == "a":
-            smazany = data.pop(index)
-            uloz_vse(data)
-            print("Záznam byl smazán:", smazany["druh"])
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM zaznamy WHERE id = ?", (zaznam_id,))
+            conn.commit()
+            conn.close()
+            print(f"Záznam ID {zaznam_id} byl smazán.")
         else:
             print("Mazání zrušeno.")
-
+    
     except ValueError:
         print("Musíš zadat číslo.")
+    except IndexError:
+        print("Neplatné číslo záznamu.")
+
 
 def uprav_zaznam():
-    data = nacti_vse()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT z.id, d.nazev, z.vek, z.pohlavi,
+                z.datum_pozorovani, z.datum_uloveni
+        FROM zaznamy z
+        JOIN druhy_zvere d ON z.druh_id = d.id
+        ORDER BY z.id
+    """)
+    zaznamy = cursor.fetchall()
+    conn.close()
 
-    if not data:
-        print("Nejsou žádné záznamy k úpravě.")
+    if not zaznamy:
         return
-    
-    vypis_zaznamy()
 
-    try:
-        cislo = int(input("Zadej číslo záznamu k úpravě: "))
-        index = cislo - 1
+    volba = input("Vyber číslo záznamu k úpravě: ")
 
-        if index < 0 or index >= len(data):
-            print("Neplatné číslo.")
-            return
+    if not volba.isdigit():
+        print("Neplatná volba.")
+        return
 
-        zaznam = data[index]
+    index = int(volba) - 1
+    if index < 0 or index >= len(zaznamy):
+        print("Neexistující záznam.")
+        return
 
-        while True:
-            print("\nCo chceš upravit?")
-            print(f"1 - Druh: {zaznam['druh']}")
-            print(f"2 - Věk: {zaznam['vek']}")
-            print(f"3 - Pohlaví: {zaznam['pohlavi']}")
-            print(f"4 - Datum pozorování: {zaznam['datum_pozorovani']}")
-            print(f"5 - Datum ulovení: {zaznam['datum_uloveni'] if zaznam['datum_uloveni'] else '—'}")
-            print("0 - Uložit a zpět")
+    zaznam = zaznamy[index]
+    zaznam_id = zaznam[0]
 
+    druh, vek, pohlavi, dp, du = zaznam[1:]
 
-            volba = input("Vyber možnost: ")
+    while True:
+        print("\nCo chceš upravit?")
+        print(f"1 - Druh: {druh}")
+        print(f"2 - Věk: {vek}")
+        print(f"3 - Pohlaví: {pohlavi}")
+        print(f"4 - Datum pozorování: {dp}")
+        print(f"5 - Datum ulovení: {du}")
+        print("0 - Uložit a zpět")
 
-            if volba == "1":
-                zaznam["druh"] = input("Nový druh: ")
+        volba = input("Volba: ")
 
-            elif volba == "2":
-                zaznam["vek"] = nacti_vek()
+        if volba == "1":
+            druh_id = vyber_druh()
+            conn = get_connection()
+            conn.execute("UPDATE zaznamy SET druh_id=? WHERE id=?", (druh_id, zaznam_id))
+            conn.commit()
+            conn.close()
+            print("Druh upraven.")
 
-            elif volba == "3":
-                zaznam["pohlavi"] = vyber_pohlavi()
+        elif volba == "2":
+            while True:
+                novy = input("Nový věk: ")
+                if novy.isdigit():
+                    vek = int(novy)
+                    break
+            conn = get_connection()
+            conn.execute("UPDATE zaznamy SET vek=? WHERE id=?", (vek, zaznam_id))
+            conn.commit()
+            conn.close()
 
-            elif volba == "4":
-                zaznam["datum_pozorovani"] = nacti_datum("Nové datum pozorování: ")
+        elif volba == "3":
+            pohlavi = vyber_pohlavi()
+            conn = get_connection()
+            conn.execute("UPDATE zaznamy SET pohlavi=? WHERE id=?", (pohlavi, zaznam_id))
+            conn.commit()
+            conn.close()
 
-            elif volba == "5":
-                zaznam["datum_uloveni"] = nacti_datum(
-                    "Nové datum ulovení (nebo Enter): ", True
-                )
+        elif volba == "4":
+            dp = nacti_datum("Nové datum pozorování: ")
+            conn = get_connection()
+            conn.execute(
+                "UPDATE zaznamy SET datum_pozorovani=? WHERE id=?",
+                (dp, zaznam_id)
+            )
+            conn.commit()
+            conn.close()
 
-            elif volba == "0":
-                uloz_vse(data)
-                print("Záznam byl uložen.")
-                break
+        elif volba == "5":
+            du = nacti_datum("Nové datum ulovení: ", povol_prazdne=True)
+            conn = get_connection()
+            conn.execute(
+                "UPDATE zaznamy SET datum_uloveni=? WHERE id=?",
+                (du, zaznam_id)
+            )
+            conn.commit()
+            conn.close()
 
+        elif volba == "0":
+            print("Změny uloženy.")
+            break
+
+        else:
+            print("Neplatná volba.")
+
+def vyber_druh():
+    while True:
+        druhy = ziskej_vsechny_druhy()
+
+        print("\nVyber druh zvěře:")
+        print("0 - Přidat nový druh")
+
+        for i, (_, nazev) in enumerate(druhy, start=1):
+            print(f"{i} - {nazev}")
+
+        volba = input("Zadej číslo: ")
+
+        if not volba.isdigit():
+            print("Zadej číslo.")
+            continue
+
+        volba = int(volba)
+
+        if volba == 0:
+            novy = input("Zadej název nového druhu: ").strip()
+            if novy:
+                pridej_druh(novy)
+                print("Druh přidán.")
             else:
-                print("Neplatná volba.")
-    except ValueError:
-        print("Musíš zadat číslo.")
+                print("Název nesmí být prázdný.")
+            continue
 
+        index = volba - 1
+        if 0 <= index < len(druhy):
+            return druhy[index][0]  
+        else:
+            print("Neplatná volba.")
 
 def vyber_pohlavi():
     while True:
@@ -161,31 +264,41 @@ def nacti_datum(vyzva, povol_prazdne=False):
                 pass
 
         print("Neplatný formát data. Zkus např. 13-01-2026 nebo 2026/01/13")
-
-
+        
 def pridej_zaznam():
+    druh_id = vyber_druh()
+
     while True:
-        druh = input("Druh zvěře: ").strip()
-        if druh:
+        vek = input("Věk: ")
+        if vek.isdigit():
+            vek = int(vek)
             break
-        print("Druh nesmí být prázdný.")
-    vek = nacti_vek()
+        print("Věk musí být číslo.")
+
     pohlavi = vyber_pohlavi()
+
     datum_pozorovani = nacti_datum("Datum pozorování: ")
-    datum_uloveni = nacti_datum("Datum ulovení (nebo Enter): ", True)
-    
+    datum_uloveni = nacti_datum("Datum ulovení (Enter = žádné): ", povol_prazdne=True)
+
     zver = Zver(
-        druh=druh,
+        druh=druh_id,
         vek=vek,
         pohlavi=pohlavi,
         datum_pozorovani=datum_pozorovani,
         datum_uloveni=datum_uloveni
     )
-    
-    uloz_zaznam(zver)
 
-    print("Záznam byl úspěšně uložen.")
+    #uloz_zaznam
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO zaznamy (druh_id, vek, pohlavi, datum_pozorovani, datum_uloveni)
+        VALUES (?, ?, ?, ?, ?)
+    """, (druh_id, vek, pohlavi, datum_pozorovani, datum_uloveni))
+    conn.commit()
+    conn.close()
 
+    print("Záznam uložen.")
 
 def hlavni_menu():
     print("\n--- EVIDENCE ZVĚŘE ---")
@@ -213,5 +326,8 @@ def hlavni_menu():
             print("Neplatná volba, zkus to znovu.")
 
 if __name__ == "__main__":
+    init_db()
+    init_druhy()
     hlavni_menu()
+
 

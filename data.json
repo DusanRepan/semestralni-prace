@@ -1,16 +1,9 @@
 [
     {
-        "druh": "HH",
-        "vek": 9,
-        "pohlavi": "samice",
-        "datum_pozorovani": "8888",
-        "datum_uloveni": null
-    },
-    {
-        "druh": "Skřivan Polní",
-        "vek": 5,
-        "pohlavi": "samice",
-        "datum_pozorovani": "13-04-2067",
+        "druh": 4,
+        "vek": 6,
+        "pohlavi": "samec",
+        "datum_pozorovani": "13-06-8888",
         "datum_uloveni": null
     }
 ]
