@@ -24,9 +24,6 @@ class EvidenceZvereApp:
         tk.Button(root, text="Vypsat záznamy", width=25,
                 command=self.vypis_zaznamy).pack(pady=5)
 
-        tk.Button(root, text="Smazat záznam", width=25,
-                command=self.smaz_zaznam).pack(pady=5)
-
         tk.Button(root, text="Konec", width=25,
                 command=root.quit).pack(pady=15)
 
@@ -132,57 +129,66 @@ class EvidenceZvereApp:
 
         okno = tk.Toplevel(self.root)
         okno.title("Výpis záznamů")
-        okno.geometry("900x400")
+        okno.geometry("800x400")
 
         tk.Label(okno, text="Přehled záznamů", font=("Arial", 14, "bold")).pack(pady=10)
 
         sloupce = ("id", "druh", "vek", "pohlavi", "dp", "du")
+        self.tree_vypis = ttk.Treeview(okno, columns=sloupce, show="headings")
+        self.tree_vypis.pack(fill="both", expand=True, padx=10, pady=10)
 
-        tree = ttk.Treeview(okno, columns=sloupce, show="headings")
-        tree.pack(fill="both", expand=True, padx=10, pady=10)
+        hlavicky = ("ID", "Druh", "Věk", "Pohlaví", "Datum pozorování", "Datum ulovení")
+        sirka = (50, 180, 60, 90, 140, 140)
 
-        # Nastavení hlaviček
-        tree.heading("id", text="ID")
-        tree.heading("druh", text="Druh")
-        tree.heading("vek", text="Věk")
-        tree.heading("pohlavi", text="Pohlaví")
-        tree.heading("dp", text="Datum pozorování")
-        tree.heading("du", text="Datum ulovení")
+        for col, text, w in zip(sloupce, hlavicky, sirka):
+            self.tree_vypis.heading(col, text=text)
+            self.tree_vypis.column(col, width=w, anchor="center")
 
-        # Nastavení šířky sloupců
-        tree.column("id", width=40, anchor="center")
-        tree.column("druh", width=150, anchor="w")
-        tree.column("vek", width=50, anchor="center")
-        tree.column("pohlavi", width=80, anchor="center")
-        tree.column("dp", width=120, anchor="center")
-        tree.column("du", width=120, anchor="center")
 
-        # Vložení dat
-        for z in zaznamy:
-            tree.insert("", "end", values=z)
+        for id_, druh, vek, pohlavi, dp, du in zaznamy:
+
+            # --- datum pozorování ---
+            if isinstance(dp, (datetime,)):
+                dp_text = dp.strftime("%d-%m-%Y")
+            elif dp:
+                dp_text = str(dp)
+            else:
+                dp_text = ""
+
+            # --- datum ulovení ---
+            if isinstance(du, (datetime,)):
+                du_text = du.strftime("%d-%m-%Y")
+            elif du:
+                du_text = str(du)
+            else:
+                du_text = ""
+
+            self.tree_vypis.insert(
+                "",
+                "end",
+                values=(id_, druh, vek, pohlavi, dp_text, du_text)
+            )
+
 
         frame = tk.Frame(okno)
         frame.pack(pady=5)
 
-        tk.Button(frame, text="Upravit", width=15,
-                command=self.uprav_zaznam).pack(side="left", padx=5)
-
-        tk.Button(frame, text="Zavřít", width=15,
-                command=okno.destroy).pack(side="left", padx=5)
+        tk.Button(frame, text="Upravit", width=15, command=self.uprav_zaznam).pack(side="left", padx=5)
+        tk.Button(frame, text="Zavřít", width=15, command=okno.destroy).pack(side="left", padx=5)
+        tk.Button(frame, text="Smazat", width=15, command=self.smazat_zaznam).pack(side="left", padx=5)
 
     def uprav_zaznam(self):
-        vyber = self.tree.selection()
-
+        vyber = self.tree_vypis.selection()
         if not vyber:
             messagebox.showwarning("Pozor", "Nejdříve vyber záznam.")
             return
 
-        hodnoty = self.tree.item(vyber[0], "values")
+        hodnoty = self.tree_vypis.item(vyber[0], "values")
         zaznam_id, druh, vek, pohlavi, dp, du = hodnoty
 
         okno = tk.Toplevel(self.root)
         okno.title("Upravit záznam")
-        okno.geometry("350x400")
+        okno.geometry("350x450")
 
         tk.Label(okno, text="Úprava záznamu", font=("Arial", 14, "bold")).pack(pady=10)
 
@@ -207,30 +213,49 @@ class EvidenceZvereApp:
         tk.Radiobutton(okno, text="Samec", variable=pohlavi_var, value="samec").pack(anchor="w", padx=40)
         tk.Radiobutton(okno, text="Samice", variable=pohlavi_var, value="samice").pack(anchor="w", padx=40)
 
-        # ---- DATA v úpravě ----
+        # ---- DATA ----
         tk.Label(okno, text="Datum pozorování:").pack(anchor="w", padx=20, pady=(10, 0))
         dp_entry = DateEntry(okno, date_pattern="dd-mm-yyyy", locale="cs_CZ")
         dp_entry.set_date(datetime.strptime(dp, "%d-%m-%Y"))
         dp_entry.pack(fill="x", padx=20)
 
-        tk.Label(okno, text="Datum ulovení:").pack(anchor="w", padx=20, pady=(10, 0))
-        du_entry = DateEntry(okno, date_pattern="dd-mm-yyyy", locale="cs_CZ")
+        tk.Label(okno, text="Datum ulovení (nepovinné):").pack(anchor="w", padx=20, pady=(10, 0))
+
+        # Checkbox pro aktivaci/neaktivaci
+        du_var = tk.BooleanVar(value=bool(du))  # True pokud datum ulovení existuje
+        du_checkbox = tk.Checkbutton(okno, text="Vyplnit datum ulovení", variable=du_var)
+        du_checkbox.pack(anchor="w", padx=20)
+
+        du_entry = DateEntry(okno, date_pattern="dd-mm-yyyy", locale="cs_CZ",
+                            state="normal" if du else "disabled")
         if du:
             du_entry.set_date(datetime.strptime(du, "%d-%m-%Y"))
         du_entry.pack(fill="x", padx=20)
+
+        # Aktivace/Deaktivace DateEntry podle checkboxu
+        def du_toggle():
+            if du_var.get():
+                du_entry.config(state="normal")
+                if not du:
+                    du_entry.set_date(datetime.today())  # pokud nebylo datum, nastav dnešní
+            else:
+                du_entry.config(state="disabled")
+                du_entry.set_date(datetime.today())  # hodnota se nepoužije
+
+        du_var.trace_add("write", lambda *args: du_toggle())
 
         # ---- ULOŽIT ----
         def ulozit():
             nazev_druhu = druh_var.get()
             druh_id = next(d[0] for d in druhy if d[1] == nazev_druhu)
+
             if not vek_entry.get().isdigit():
                 messagebox.showerror("Chyba", "Věk musí být číslo.")
                 return
-
             vek = int(vek_entry.get())
             pohlavi = pohlavi_var.get()
             dp_new = dp_entry.get()
-            du_new = du_entry.get() or None
+            du_new = du_entry.get() if du_var.get() else None  # <--- tady
 
             conn = get_connection()
             cursor = conn.cursor()
@@ -241,11 +266,35 @@ class EvidenceZvereApp:
             """, (druh_id, vek, pohlavi, dp_new, du_new, zaznam_id))
             conn.commit()
             conn.close()
+
             messagebox.showinfo("Hotovo", "Záznam byl upraven.")
             okno.destroy()
 
-    def smaz_zaznam(self):
-        messagebox.showinfo("Info", "Mazání záznamu – zatím prázdné")
+        tk.Button(okno, text="Uložit", width=20, command=ulozit).pack(pady=20)
+
+    def smazat_zaznam(self):
+        vyber = self.tree_vypis.selection()
+
+        if not vyber:
+            messagebox.showwarning("Chyba", "Nejprve vyber záznam ke smazání.")
+            return
+
+        hodnoty = self.tree_vypis.item(vyber[0], "values")
+        zaznam_id = hodnoty[0]
+
+        if not messagebox.askyesno(
+            "Potvrzení",
+            "Opravdu chceš tento záznam smazat?"
+        ):
+            return
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM zaznamy WHERE id = ?", (zaznam_id,))
+        conn.commit()
+        conn.close()
+
+        self.tree_vypis.delete(vyber[0])
 
     def okno_novy_druh(self, parent, combobox):
             win = tk.Toplevel(parent)
@@ -321,11 +370,8 @@ class EvidenceZvereApp:
         data = cursor.fetchall()
         conn.close()
         return data
-
-
-
-
-
+    
+    
 if __name__ == "__main__":
     init_db()
     init_druhy()
