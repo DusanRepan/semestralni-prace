@@ -170,7 +170,6 @@ class EvidenceZvereApp:
         tk.Button(frame, text="Zavřít", width=15,
                 command=okno.destroy).pack(side="left", padx=5)
 
-
     def uprav_zaznam(self):
         vyber = self.tree.selection()
 
