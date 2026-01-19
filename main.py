@@ -11,6 +11,7 @@ class EvidenceZvereApp:
         self.root = root
         self.root.title("Evidence zvěře")
         self.root.geometry("400x300")
+        self.okno_vypis = None
 
         tk.Label(
             root,
@@ -23,7 +24,10 @@ class EvidenceZvereApp:
 
         tk.Button(root, text="Vypsat záznamy", width=25,
                 command=self.vypis_zaznamy).pack(pady=5)
-
+        
+        tk.Button(root, text="Správa druhů", width=25, 
+                command=self.sprava_druhu).pack(pady=5)
+        
         tk.Button(root, text="Konec", width=25,
                 command=root.quit).pack(pady=15)
 
@@ -64,7 +68,7 @@ class EvidenceZvereApp:
 
         # ---------- DATA ----------
         tk.Label(okno, text="Datum pozorování:").pack(anchor="w", padx=20, pady=(10, 0))
-        dp_entry = DateEntry(okno, date_pattern="dd-mm-yyyy", locale="cs_CZ")
+        dp_entry = DateEntry(okno, date_pattern="dd-mm-yyyy", locale="cs_CZ", state="readonly")
         dp_entry.pack(fill="x", padx=20)
 
         tk.Label(okno, text="Datum ulovení (nepovinné):").pack(anchor="w", padx=20, pady=(10, 0))
@@ -79,7 +83,7 @@ class EvidenceZvereApp:
         # Aktivace/Deaktivace DateEntry podle checkboxu
         def du_toggle():
             if du_var.get():
-                du_entry.config(state="normal")
+                du_entry.config(state="readonly")
             else:
                 du_entry.config(state="disabled")
                 du_entry.set_date(datetime.today())  # jen aby měl nějakou validní hodnotu, nepoužije se
@@ -126,7 +130,8 @@ class EvidenceZvereApp:
         
     def vypis_zaznamy(self):
         zaznamy = self.nacti_zaznamy()
-
+        okno = self.okno_vypis
+        
         okno = tk.Toplevel(self.root)
         okno.title("Výpis záznamů")
         okno.geometry("800x400")
@@ -322,7 +327,7 @@ class EvidenceZvereApp:
                 win.destroy()
 
             tk.Button(win, text="Uložit", command=uloz).pack(pady=10)
-            
+
     def nacti_zaznamy(self):
         conn = get_connection()
         cursor = conn.cursor()
@@ -370,8 +375,66 @@ class EvidenceZvereApp:
         data = cursor.fetchall()
         conn.close()
         return data
-    
-    
+
+    def sprava_druhu(self):
+        okno = tk.Toplevel(self.root)
+        okno.title("Správa druhů zvěře")
+        okno.geometry("350x300")
+
+        tk.Label(okno, text="Druhy zvěře", font=("Arial", 14, "bold")).pack(pady=10)
+
+        listbox = tk.Listbox(okno)
+        listbox.pack(fill="both", expand=True, padx=10)
+
+        def nacti():
+            listbox.delete(0, tk.END)
+            for _, nazev in self.nacti_druhy():
+                listbox.insert(tk.END, nazev)
+
+        nacti()
+
+        def smazat():
+            vyber = listbox.curselection()
+            if not vyber:
+                messagebox.showwarning("Chyba", "Vyber druh.")
+                return
+
+            nazev = listbox.get(vyber[0])
+
+            conn = get_connection()
+            cur = conn.cursor()
+
+            cur.execute("SELECT id FROM druhy_zvere WHERE nazev=?", (nazev,))
+            druh_id = cur.fetchone()[0]
+
+            cur.execute(
+                "SELECT COUNT(*) FROM zaznamy WHERE druh_id=?",
+                (druh_id,)
+            )
+
+            if cur.fetchone()[0] > 0:
+                messagebox.showerror(
+                    "Nelze smazat",
+                    "Druh je použit v záznamech."
+                )
+                conn.close()
+                return
+
+            if not messagebox.askyesno(
+                "Potvrzení",
+                f"Opravdu smazat '{nazev}'?"
+            ):
+                conn.close()
+                return
+
+            cur.execute("DELETE FROM druhy_zvere WHERE id=?", (druh_id,))
+            conn.commit()
+            conn.close()
+
+            nacti()
+
+        tk.Button(okno, text="Smazat vybraný druh", command=smazat).pack(pady=10)
+
 if __name__ == "__main__":
     init_db()
     init_druhy()
