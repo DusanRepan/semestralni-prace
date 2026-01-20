@@ -176,6 +176,7 @@ Aplikace je dále rozšiřitelná a může sloužit jako základ pro komplexněj
 
 * Honza Bartoň - velkayolanda
 
+---
 
 **Autor:** Dušan Repáň
 **Rok:** 2026
