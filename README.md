@@ -172,10 +172,10 @@ Aplikace je dále rozšiřitelná a může sloužit jako základ pro komplexněj
 
 ---
 
-## 8. Poděkování testerům(za obzvlášť velké rozbití mého programu a nalezení chyb)
+## 8. Poděkování testerům
 
+* Zátěžový test provedl(co z programu nesnědl to rozbil):
 * Honza Bartoň - velkayolanda
-
 
 **Autor:** Dušan Repáň
 **Rok:** 2026
