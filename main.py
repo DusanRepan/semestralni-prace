@@ -158,7 +158,7 @@ class EvidenceZvereApp:
             textvariable=self.filtr_vek,
             state="readonly",
             width=10
-        ).grid(row=0, column=5, padx=5)
+        ).grid(row=0, column=3, padx=5)
         
         # POHLAVÍ
         tk.Label(filtr_frame, text="Pohlaví:").grid(row=0, column=4)
@@ -169,7 +169,7 @@ class EvidenceZvereApp:
             textvariable=self.filtr_pohlavi,
             state="readonly",
             width=10
-        ).grid(row=0, column=3, padx=5)
+        ).grid(row=0, column=5, padx=5)
 
         # DATUM
         tk.Label(filtr_frame, text="Datum:").grid(row=0, column=6)
@@ -270,7 +270,7 @@ class EvidenceZvereApp:
 
         # ---- DATA ----
         tk.Label(okno, text="Datum pozorování:").pack(anchor="w", padx=20, pady=(10, 0))
-        dp_entry = DateEntry(okno, date_pattern="dd-mm-yyyy", locale="cs_CZ")
+        dp_entry = DateEntry(okno, date_pattern="dd-mm-yyyy",state="readonly", locale="cs_CZ")
         dp_entry.set_date(datetime.strptime(dp, "%d-%m-%Y"))
         dp_entry.pack(fill="x", padx=20)
 
@@ -282,7 +282,7 @@ class EvidenceZvereApp:
         du_checkbox.pack(anchor="w", padx=20)
 
         du_entry = DateEntry(okno, date_pattern="dd-mm-yyyy", locale="cs_CZ",
-                            state="normal" if du else "disabled")
+                            state="readonly" if du else "disabled")
         if du:
             du_entry.set_date(datetime.strptime(du, "%d-%m-%Y"))
         du_entry.pack(fill="x", padx=20)
@@ -290,7 +290,7 @@ class EvidenceZvereApp:
         # Aktivace/Deaktivace DateEntry podle checkboxu
         def du_toggle():
             if du_var.get():
-                du_entry.config(state="normal")
+                du_entry.config(state="readonly")
                 if not du:
                     du_entry.set_date(datetime.today())  # pokud nebylo datum, nastav dnešní
             else:
