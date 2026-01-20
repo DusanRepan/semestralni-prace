@@ -177,5 +177,7 @@ Aplikace je dále rozšiřitelná a může sloužit jako základ pro komplexněj
 * Zátěžový test provedl(co z programu nesnědl to rozbil):
 * Honza Bartoň - velkayolanda
 
+---
+
 **Autor:** Dušan Repáň
 **Rok:** 2026
