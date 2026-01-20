@@ -135,9 +135,59 @@ class EvidenceZvereApp:
         okno = tk.Toplevel(self.root)
         okno.title("Výpis záznamů")
         okno.geometry("800x400")
-
+        
         tk.Label(okno, text="Přehled záznamů", font=("Arial", 14, "bold")).pack(pady=10)
 
+        # ---- FILTR ----
+        filtr_frame = tk.Frame(okno)
+        filtr_frame.pack(fill="x", padx=10, pady=5)
+
+        # DRUH
+        tk.Label(filtr_frame, text="Druh:").grid(row=0, column=0)
+        druhy = ["Vše"] + [d[1] for d in self.nacti_druhy()]
+        self.filtr_druh = tk.StringVar(value="Vše")
+        ttk.Combobox(filtr_frame, values=druhy, textvariable=self.filtr_druh,
+                    state="readonly", width=18).grid(row=0, column=1, padx=5)
+
+        # VĚK
+        tk.Label(filtr_frame, text="Věk:").grid(row=0, column=2)
+        self.filtr_vek = tk.StringVar(value="Mladý → Starý")
+        ttk.Combobox(
+            filtr_frame,
+            values=["Mladý → Starý", "Starý → Mladý"],
+            textvariable=self.filtr_vek,
+            state="readonly",
+            width=10
+        ).grid(row=0, column=5, padx=5)
+        
+        # POHLAVÍ
+        tk.Label(filtr_frame, text="Pohlaví:").grid(row=0, column=4)
+        self.filtr_pohlavi = tk.StringVar(value="Vše")
+        ttk.Combobox(
+            filtr_frame,
+            values=["Vše", "samec", "samice"],
+            textvariable=self.filtr_pohlavi,
+            state="readonly",
+            width=10
+        ).grid(row=0, column=3, padx=5)
+
+        # DATUM
+        tk.Label(filtr_frame, text="Datum:").grid(row=0, column=6)
+        self.filtr_datum = tk.StringVar(value="Nejnovější → Nejstarší")
+        ttk.Combobox(
+            filtr_frame,
+            values=["Nejnovější → Nejstarší", "Nejstarší → Nejnovější"],
+            textvariable=self.filtr_datum,
+            state="readonly",
+            width=22
+        ).grid(row=0, column=7, padx=5) 
+
+        self.filtr_druh.trace_add("write", lambda *args: self.aplikuj_filtry())
+        self.filtr_pohlavi.trace_add("write", lambda *args: self.aplikuj_filtry())
+        self.filtr_vek.trace_add("write", lambda *args: self.aplikuj_filtry())
+        self.filtr_datum.trace_add("write", lambda *args: self.aplikuj_filtry())
+
+            
         sloupce = ("id", "druh", "vek", "pohlavi", "dp", "du")
         self.tree_vypis = ttk.Treeview(okno, columns=sloupce, show="headings")
         self.tree_vypis.pack(fill="both", expand=True, padx=10, pady=10)
@@ -434,6 +484,59 @@ class EvidenceZvereApp:
             nacti()
 
         tk.Button(okno, text="Smazat vybraný druh", command=smazat).pack(pady=10)
+
+    def aplikuj_filtry(self):
+        # vymazání tabulky
+        for i in self.tree_vypis.get_children():
+            self.tree_vypis.delete(i)
+
+        podminky = []
+        parametry = []
+
+        # DRUH
+        if self.filtr_druh.get() != "Vše":
+            podminky.append("d.nazev = ?")
+            parametry.append(self.filtr_druh.get())
+
+        # POHLAVÍ
+        if self.filtr_pohlavi.get() != "Vše":
+            podminky.append("z.pohlavi = ?")
+            parametry.append(self.filtr_pohlavi.get())
+
+        where_sql = ""
+        if podminky:
+            where_sql = "WHERE " + " AND ".join(podminky)
+
+        # ŘAZENÍ VĚK
+        order_sql = ""
+        if self.filtr_vek.get() == "Mladý → Starý":
+            order_sql = "ORDER BY z.vek ASC"
+        else:
+            order_sql = "ORDER BY z.vek DESC"
+
+        # ŘAZENÍ DATUM
+        if self.filtr_datum.get() == "Nejnovější → Nejstarší":
+            order_sql = "ORDER BY z.datum_pozorovani DESC"
+        else:
+            order_sql = "ORDER BY z.datum_pozorovani ASC"
+
+        sql = f"""
+            SELECT z.id, d.nazev, z.vek, z.pohlavi,
+                z.datum_pozorovani, z.datum_uloveni
+            FROM zaznamy z
+            JOIN druhy_zvere d ON z.druh_id = d.id
+            {where_sql}
+            {order_sql}
+        """
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql, parametry)
+        data = cursor.fetchall()
+        conn.close()
+
+        for r in data:
+            self.tree_vypis.insert("", "end", values=r)
 
 if __name__ == "__main__":
     init_db()
