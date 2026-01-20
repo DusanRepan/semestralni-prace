@@ -6,7 +6,6 @@ def pocet_podle_druhu():
     druhy = [z["druh"] for z in data]
     return Counter(druhy)
 
-
 def pocet_podle_pohlavi():
     data = nacti_vse()
     pohlavi = [z["pohlavi"] for z in data]

@@ -68,7 +68,6 @@ def ziskej_vsechny_druhy():
     conn.close()
     return druhy
 
-
 def pridej_druh(nazev):
     conn = get_connection()
     cursor = conn.cursor()

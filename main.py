@@ -1,14 +1,14 @@
-import tkinter as tk
-from tkinter import messagebox
-from database import init_db, init_druhy
-from tkinter import ttk
+import tkinter as tk # základní GUI knihovna
+from tkinter import messagebox # vyskakovací dialogy
+from database import init_db, init_druhy # inicializace databáze a výchozích druhů
+from tkinter import ttk # widgety
 from database import get_connection, pridej_druh
-from datetime import datetime
-from tkcalendar import DateEntry
+from datetime import datetime   # práce s datumy
+from tkcalendar import DateEntry # kalendářový výběr datumu
 
 class EvidenceZvereApp:
     def __init__(self, root):
-        self.root = root
+        self.root = root  # hlavní okno aplikace
         self.root.title("Evidence zvěře")
         self.root.geometry("400x300")
         self.okno_vypis = None
@@ -29,7 +29,7 @@ class EvidenceZvereApp:
                 command=self.sprava_druhu).pack(pady=5)
         
         tk.Button(root, text="Konec", width=25,
-                command=root.quit).pack(pady=15)
+                command=root.quit).pack(pady=15) # ukončí aplikaci
 
     def pridej_zaznam(self):
         okno = tk.Toplevel(self.root)
@@ -41,7 +41,7 @@ class EvidenceZvereApp:
         # ---------- DRUH ----------
         tk.Label(okno, text="Druh zvěře:").pack(anchor="w", padx=20)
 
-        druhy = self.nacti_druhy()
+        druhy = self.nacti_druhy() # načtení druhů z DB
         nazvy = ["➕ Přidat nový druh"] + [d[1] for d in druhy]
 
         self.druh_var = tk.StringVar()
@@ -51,7 +51,7 @@ class EvidenceZvereApp:
 
         def zmena_druhu(event):
             if self.druh_var.get() == "➕ Přidat nový druh":
-                self.okno_novy_druh(okno, combo)
+                self.okno_novy_druh(okno, combo) # proměnná pro combobox
 
         combo.bind("<<ComboboxSelected>>", zmena_druhu)
 
@@ -66,7 +66,7 @@ class EvidenceZvereApp:
         tk.Radiobutton(okno, text="Samec", variable=pohlavi_var, value="samec").pack(anchor="w", padx=40)
         tk.Radiobutton(okno, text="Samice", variable=pohlavi_var, value="samice").pack(anchor="w", padx=40)
 
-        # ---------- DATA ----------
+        # ---------- DATUMY ----------
         tk.Label(okno, text="Datum pozorování:").pack(anchor="w", padx=20, pady=(10, 0))
         dp_entry = DateEntry(okno, date_pattern="dd-mm-yyyy", locale="cs_CZ", state="readonly")
         dp_entry.pack(fill="x", padx=20)
